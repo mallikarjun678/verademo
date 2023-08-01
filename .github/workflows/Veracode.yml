@@ -1,0 +1,244 @@
+Skip to:
+
+Skip to Jira Navigation
+Skip to Side Navigation
+Skip to Main Content
+
+
+Your work
+
+Projects
+
+Filters
+
+Dashboards
+
+Teams
+
+Apps
+
+Create
+Search
+
+3
+
+
+
+
+DevX Surge
+Software project
+PLANNING
+DEVELOPMENT
+OPERATIONS
+You're in a company-managed project
+Learn more
+
+
+Projects
+DevX Surge
+DXS-12
+
+DXS-1
+
+
+Run All Static Scan Types
+
+Attach
+
+Create subtask
+
+Link issue
+
+Description
+
+“As a New Repo Tools Team Member,
+
+I need to run some example static scans from the command line,
+
+so I can understand the core Veracode value proposition that we are looking to automate with the DXS GitHub project.“
+
+Acceptance Criteria
+
+Perform the following types of scan against the GitHub - veracode/verademo: A deliberately insecure Java web application  repo, using their command line invocation mechanisms:
+
+Static Pipeline Scan: See Getting Started with Pipeline Scan | Veracode Docs for details. 
+
+Static Policy Scan: See API Wrappers | Veracode Docs and especially uploadandscan | Veracode Docs for details.
+
+Acceptance Criteria
+
+None
+Attachments (5)
+
+
+
+Screenshot 2023-06-16 at 4.27.07PM.png
+16 Jun 2023, 04:50 pm
+
+Screenshot 2023-06-16 at 4.28.03PM.png
+16 Jun 2023, 04:50 pm
+
+main (2)(1).yml
+16 Jun 2023, 04:21 pm
+
+main(2).yml
+16 Jun 2023, 03:49 pm
+
+veracode(1).yml
+16 Jun 2023, 03:45 pm
+Activity
+Show:
+
+All
+
+Comments
+
+History
+
+Work log
+
+Salesforce Comments
+
+Emails
+
+Newest first
+Profile image of Mallikarjun Pulluru
+Add a comment…
+Pro tip: press 
+M
+ to comment
+
+Vivek Kumar Singh 
+16 June 2023 at 06:20
+Edited
+
+Couple of things I have tried as part of this Story:
+
+ 
+
+→ successfully ran the below workflow against GitHub - veracode/verademo: A deliberately insecure Java web application 
+
+
+veracode(1).yml
+16 Jun 2023, 03:45 pm
+→ Also, I am trying to run below attached file but getting some issue, Trying to understand and looking for the fix. Once done will update here.
+
+
+main(2).yml
+16 Jun 2023, 03:49 pm
+ 
+
+ 
+
+Further Update: I have modified the below YML file and it ran fine:
+
+ 
+
+Pasting some of the result:
+
+ 
+
+
+
+Closed
+Done
+
+Actions
+Details
+Assignee
+
+
+
+Vivek Kumar Singh
+Assign to me
+Reporter
+
+
+Mina Tawadrous
+Labels
+
+
+None
+Story Points
+
+
+2
+Epic Link
+
+
+DevX Surge Onboarding
+Sprint
+
+
+None
+
++1
+Priority
+
+
+
+Medium
+Automation
+
+Rule executions
+Salesforce
+
+Associations
+More fields
+Original estimate, Time tracking, Components, Fix versions
+Created 22 May 2023 at 10:10
+Updated 20 June 2023 at 08:24
+Resolved 20 June 2023 at 08:24
+Configure
+
+Veracode (1).yml
+yaml · 3 KB
+
+# This workflow uses actions that are not certified by GitHub.
+# They are provided by a third-party and are governed by
+# separate terms of service, privacy policy, and support
+# documentation.
+# This workflow will initiate a Veracode Static Analysis Pipeline scan, return a results.json and convert to SARIF for upload as a code scanning alert
+name: Veracode Static Analysis Pipeline Scan
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    # The branches below must be a subset of the branches above
+    branches: [ "main" ]
+# A workflow run is made up of one or more jobs that can run sequentially or in parallel
+permissions:
+  contents: read
+jobs:
+  # This workflow contains a job to build and submit pipeline scan, you will need to customize the build process accordingly and make sure the artifact you build is used as the file input to the pipeline scan file parameter
+  build-and-pipeline-scan:
+    # The type of runner that the job will run on
+    permissions:
+      contents: read # for actions/checkout to fetch code
+      security-events: write # for github/codeql-action/upload-sarif to upload SARIF results
+      actions: read # only required for a private repository by github/codeql-action/upload-sarif to get the Action run status
+    runs-on: ubuntu-latest
+    steps:
+    # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it and copies all sources into ZIP file for submitting for analysis. Replace this section with your applications build steps
+    - uses: actions/checkout@v3
+      with:
+        repository: ''
+    - run: zip -r veracode-scan-target.zip ./
+    # download the Veracode Static Analysis Pipeline scan jar
+    - run: curl --silent --show-error --fail -O https://downloads.veracode.com/securityscan/pipeline-scan-LATEST.zip
+    - run: unzip -o pipeline-scan-LATEST.zip
+    - uses: actions/setup-java@v3
+      with:
+        java-version: 8
+        distribution: 'temurin'
+    - run: java -jar pipeline-scan.jar --veracode_api_id "${{secrets.VERACODE_API_ID}}" --veracode_api_key "${{secrets.VERACODE_API_KEY}}" --fail_on_severity="Very High, High" --file veracode-scan-target.zip
+      continue-on-error: true
+    - name: Convert pipeline scan output to SARIF format
+      id: convert
+      uses: veracode/veracode-pipeline-scan-results-to-sarif@ff08ae5b45d5384cb4679932f184c013d34da9be
+      with:
+        pipeline-results-json: results.json
+    - uses: github/codeql-action/upload-sarif@v2
+      with:
+        # Path to SARIF file relative to the root of the repository
+        sarif_file: veracode-results.sarif
